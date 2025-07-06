@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+*.egg-info/
+
+# Terraform state
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform/

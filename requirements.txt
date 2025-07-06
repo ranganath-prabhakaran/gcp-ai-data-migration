@@ -1,0 +1,8 @@
+pyautogen>=0.2.25
+google-generativeai
+requests
+fastapi
+uvicorn
+PyMySQL
+SQLAlchemy
+google-cloud-secret-manager
