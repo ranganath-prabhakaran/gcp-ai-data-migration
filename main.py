@@ -17,6 +17,8 @@ class MigrationState:
         self.source_db_ip = None
         self.cloud_sql_instance_name = None
         self.gcs_bucket_name = None
+        self.user_secret = None
+        self.pass_secret = None
         print("MigrationState initialized.")
 
     def update_infra_details(self, terraform_outputs):
@@ -24,6 +26,8 @@ class MigrationState:
         self.source_db_ip = terraform_outputs.get("source_db_private_ip", {}).get("value")
         self.cloud_sql_instance_name = terraform_outputs.get("cloud_sql_instance_name", {}).get("value")
         self.gcs_bucket_name = terraform_outputs.get("migration_gcs_bucket", {}).get("value")
+        self.user_secret = terraform_outputs.get("user_secret", {}).get("value")
+        self.pass_secret = terraform_outputs.get("pass_secret", {}).get("value")
         print(f"State Updated: MCP IP set to {self.mcp_instance_ip}")
 
 def main(databases_to_migrate: list):

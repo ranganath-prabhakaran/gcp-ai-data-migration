@@ -48,10 +48,10 @@ def run_gcs_import_workflow(db_name, gcs_bucket, instance_name, project_id):
     except subprocess.CalledProcessError as e:
         return f"ERROR during GCS import script execution: {e.stderr}"
 
-def run_dms_workflow(db_name: str, project_id: str, region: str, source_db_ip: str, cloud_sql_instance_id: str):
+def run_dms_workflow(db_name: str, project_id: str, region: str, source_db_ip: str, cloud_sql_instance_id: str, user_secret: str, pass_secret: str):
     """Executes the DMS workflow by calling the bash script."""
     try:
-        args = [db_name, project_id, region, source_db_ip, cloud_sql_instance_id]
+        args = [db_name, project_id, region, source_db_ip, cloud_sql_instance_id, user_secret, pass_secret]
         # DMS script doesn't need DB credentials directly, as it uses connection profiles
         # that reference secrets, but we'll use the same helper for consistency if needed.
         script_path = "scripts/dms_workflow.sh"
