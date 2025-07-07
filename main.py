@@ -1,17 +1,13 @@
-import os
-import autogen
 import argparse
+import autogen
 from utils.gcp_secrets import get_gcp_secret
+from utils.config_parser import get_tf_config
 from agents import (
-    environment_setup_agent, data_migration_agent,
-    data_validation_agent, performance_optimization_agent,
-    schema_conversion_agent, anomaly_detection_agent
+    environment_setup_agent, data_migration_agent, data_validation_agent,
+    performance_optimization_agent, schema_conversion_agent, anomaly_detection_agent
 )
 from agent_tools.infra_tools import run_terraform_apply
 from mcp_server import mcp_client
-
-# --- Core Configuration ---
-GCP_PROJECT_ID = "rangie-gcp-project"
 
 class MigrationState:
     """A state object to hold infrastructure details discovered at runtime."""
@@ -28,15 +24,23 @@ class MigrationState:
         self.source_db_ip = terraform_outputs.get("source_db_private_ip", {}).get("value")
         self.cloud_sql_instance_name = terraform_outputs.get("cloud_sql_instance_name", {}).get("value")
         self.gcs_bucket_name = terraform_outputs.get("migration_gcs_bucket", {}).get("value")
-        print(f"✅ State Updated: MCP IP set to {self.mcp_instance_ip}")
+        print(f"State Updated: MCP IP set to {self.mcp_instance_ip}")
 
 def main(databases_to_migrate: list):
     """Initializes and runs the agentic migration workflow."""
-    MIGRATION_STATE = MigrationState(GCP_PROJECT_ID)
+    
+    # Read Project ID from terraform.tfvars to ensure consistency
+    tf_config = get_tf_config()
+    gcp_project_id = tf_config.get("gcp_project_id")
+    if not gcp_project_id:
+        print("FATAL: gcp_project_id not found in terraform/terraform.tfvars")
+        return
 
-    print("🤖 Initializing AI Agent Team...")
+    MIGRATION_STATE = MigrationState(gcp_project_id)
+
+    print(f"Initializing AI Agent Team for Project: {gcp_project_id}...")
     try:
-        gemini_api_key = get_gcp_secret(GCP_PROJECT_ID, "gemini-api-key")
+        gemini_api_key = get_gcp_secret(gcp_project_id, "gemini-api-key")
     except Exception as e:
         print(f"FATAL: Could not fetch 'gemini-api-key' from Secret Manager. {e}")
         return
@@ -48,8 +52,8 @@ def main(databases_to_migrate: list):
         outputs = run_terraform_apply()
         if outputs:
             MIGRATION_STATE.update_infra_details(outputs)
-            return f"SUCCESS: Terraform apply completed. Infrastructure details captured."
-        return "ERROR: Terraform apply failed or did not return outputs."
+            return "SUCCESS: Terraform apply completed and server is healthy. Infrastructure details captured."
+        return "ERROR: Terraform apply failed or server health check timed out."
 
     def gcs_import_wrapper(db_name): return mcp_client.run_gcs_import_workflow(MIGRATION_STATE, db_name)
     def dms_import_wrapper(db_name): return mcp_client.run_dms_workflow(MIGRATION_STATE, db_name)
@@ -62,8 +66,7 @@ def main(databases_to_migrate: list):
     )
 
     agents = [
-        user_proxy,
-        environment_setup_agent.create_agent(llm_config),
+        user_proxy, environment_setup_agent.create_agent(llm_config),
         schema_conversion_agent.create_agent(llm_config),
         data_migration_agent.create_agent(llm_config),
         data_validation_agent.create_agent(llm_config),
@@ -85,19 +88,14 @@ def main(databases_to_migrate: list):
 
     db_list_str = ", ".join(f"'{db}'" for db in databases_to_migrate)
     initial_task = f"""
-    Start the end-to-end MySQL database migration for GCP Project '{GCP_PROJECT_ID}'.
+    Start the end-to-end MySQL database migration for GCP Project '{gcp_project_id}'.
     Databases to migrate: [{db_list_str}].
-
     Execute this plan:
-    1.  **EnvironmentSetupAgent**: Provision the GCP environment using `run_terraform_apply`.
-    2.  **DataMigrationAgent**: For each database:
-        a. Get its size using `get_db_metadata`.
-        b. If size < 100GB, use the `run_gcs_import_workflow` tool.
-        c. If size >= 100GB, use the `run_dms_workflow` tool.
-    3.  **DataValidationAgent**: After migration, verify data integrity.
-    4.  **PerformanceOptimizationAgent**: Provide optimization recommendations.
-    
-    Report 'TERMINATE' upon successful completion of all steps.
+    1.  EnvironmentSetupAgent: Provision the GCP environment using `run_terraform_apply`.
+    2.  DataMigrationAgent: For each database, get its size, then choose and execute the correct migration workflow (GCS for < 100GB, DMS for >= 100GB).
+    3.  DataValidationAgent: After migration, verify data integrity.
+    4.  PerformanceOptimizationAgent: Provide optimization recommendations.
+    Report 'TERMINATE' upon successful completion.
     """
     user_proxy.initiate_chat(manager, message=initial_task)
 
