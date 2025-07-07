@@ -8,9 +8,10 @@ def _wait_for_server_ready(ip: str, timeout: int = 180, interval: int = 15):
     """Pings the MCP server health check endpoint until it's ready or times out."""
     start_time = time.time()
     url = f"http://{ip}:8000/"
+    health_url = f"{url.rstrip('/')}/health"
     while time.time() - start_time < timeout:
         try:
-            response = requests.get(url, timeout=10)
+            response = requests.get(health_url, timeout=10)
             if response.status_code == 200:
                 print(f"Server at {ip} is healthy and ready.")
                 return True

@@ -34,6 +34,8 @@ def run_dms_workflow(state, db_name: str) -> str:
         "project_id": state.project_id,
         "region": "us-central1",
         "source_db_ip": state.source_db_ip,
-        "cloud_sql_instance_id": state.cloud_sql_instance_name
+        "cloud_sql_instance_id": state.cloud_sql_instance_name,
+        "user_secret": state.user_secret,
+        "pass_secret": state.pass_secret
     }
     return _call_mcp_tool(state.mcp_instance_ip, "run_dms_workflow", params)
