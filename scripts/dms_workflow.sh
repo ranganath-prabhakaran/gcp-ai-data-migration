@@ -26,7 +26,7 @@ echo "-> DMS Workflow for '${DB_NAME}' initiated."
 # --- MONITORING LOOP ---
 echo "Monitoring migration job status... This may take a while."
 while true; do
-    STATUS=$(gcloud database-migration migration-jobs describe "${MIGRATION_JOB_ID}" --region="${REGION}" --project="${PROJECT_ID}" --format="value(phase)")
+    STATUS=$(gcloud database-migration migration-jobs describe "${MIGRATION_JOB_NAME}" --region="${REGION}" --project="${PROJECT_ID}" --format="value(phase)")
     echo "Current job phase: '${STATUS}'"
 
     if [ "${STATUS}" == "COMPLETED" ]; then
