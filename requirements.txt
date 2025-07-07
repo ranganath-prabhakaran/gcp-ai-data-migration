@@ -6,3 +6,4 @@ uvicorn
 PyMySQL
 SQLAlchemy
 google-cloud-secret-manager
+python-hcl2
